@@ -1,0 +1,25 @@
+{
+  "LOG": true,
+  "LOG_LEVEL": "info",
+  "PORT": 3000,
+  "HOST": "0.0.0.0",
+  "APIKEY": "test",
+  "API_TIMEOUT_MS": 600000,
+  "Providers": [
+    {
+      "name": "minimax",
+      "api_base_url": "http://106.75.235.251:9000/v1/chat/completions",
+      "api_key": "",
+      "models": ["minimax-m27"],
+      "transformer": {
+        "use": [
+          ["maxtoken", { "max_tokens": 65536 }],
+          "streamoptions"
+        ]
+      }
+    }
+  ],
+  "Router": {
+    "default": "minimax,minimax-m27"
+  }
+}

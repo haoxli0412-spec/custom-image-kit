@@ -1,6 +1,6 @@
 # 自定义沙盒镜像构建指南
 
-本工具包帮助你基于沙盒基镜像构建自定义镜像，使其支持 SDK `command` 操作，并可添加你自己的服务。
+本工具包帮助你基于沙盒基镜像构建自定义镜像，使其支持 SDK `command` 操作、Claude Code 智能编程，并可添加你自己的服务。
 
 ---
 
@@ -10,10 +10,11 @@
 2. [快速开始](#快速开始)
 3. [基镜像内置服务](#基镜像内置服务)
 4. [SDK command 能力 (envd)](#sdk-command-能力-envd)
-5. [流式输出接口](#流式输出接口)
-6. [添加自定义服务](#添加自定义服务)
-7. [完整工作流](#完整工作流)
-8. [FAQ](#faq)
+5. [Claude Code + CCR](#claude-code--ccr)
+6. [流式输出接口](#流式输出接口)
+7. [添加自定义服务](#添加自定义服务)
+8. [完整工作流](#完整工作流)
+9. [FAQ](#faq)
 
 ---
 
@@ -28,14 +29,15 @@
 │  ├── execd          (端口 44772) - 代码/命令执行 (SSE 流式)    │
 │  ├── jupyter        (端口 44771) - Jupyter 内核               │
 │  ├── envd           (端口 49983) - SDK command 通道           │
+│  ├── ccr            (端口 3000)  - Claude Code Router        │
 │  └── [你的服务]      (自定义端口) - 你的业务逻辑               │
 ├─────────────────────────────────────────────────────────────┤
 │  基镜像: code-interpreter:v1.0.1-mixed                       │
 └─────────────────────────────────────────────────────────────┘
          │                    │                    │
          ▼                    ▼                    ▼
-   SDK commands.run()    流式 /command          你的客户端
-   (通过 envd)           (直接 HTTP)            (通过暴露端口)
+   SDK commands.run()    流式 /command          Claude Code CLI
+   (通过 envd)           (直接 HTTP)            (通过 ccr 代理)
 ```
 
 **进程管理**: 所有服务由 `supervisord` 统一管理，容器入口点为 `/usr/bin/supervisord`。
@@ -47,15 +49,17 @@
 ```bash
 # 1. 准备文件 (确保 envd 二进制在当前目录)
 ls
-# Dockerfile  envd  build-and-push.sh  register-image.sh
+# Dockerfile  envd  ccr-config.json  build-and-push.sh  register-image.sh
 
-# 2. 编辑 Dockerfile 中的自定义区域
+# 2. 配置 ccr-config.json (填入你的模型 Provider 信息)
 
-# 3. 构建并推送
+# 3. 编辑 Dockerfile 中的自定义区域 (可选, 添加你自己的服务)
+
+# 4. 构建并推送
 chmod +x build-and-push.sh register-image.sh
 ./build-and-push.sh v1.0
 
-# 4. 注册到沙盒平台
+# 5. 注册到沙盒平台
 ./register-image.sh registry.cn-sh-01.sensecore.cn/your-ns/custom-sandbox:v1.0
 ```
 
@@ -77,7 +81,7 @@ chmod +x build-and-push.sh register-image.sh
 - Go 1.24 (默认), 1.23
 - Java 21 (OpenJDK)
 
-**已占用端口**: `5758`, `44772`, `44771`。添加 envd 后还会占用 `49983`。
+**已占用端口**: `5758`, `44772`, `44771`。添加 envd 后还会占用 `49983`，添加 CCR 后还会占用 `3000`。
 
 ---
 
@@ -124,6 +128,84 @@ envd (端口 49983, 容器内)
   │ 创建子进程执行命令
   ▼
 Shell 执行 → 返回 stdout/stderr/exit_code
+```
+
+---
+
+## Claude Code + CCR
+
+### 什么是 CCR
+
+CCR (Claude Code Router) 是一个 API 代理服务，运行在容器内的 3000 端口。它让 Claude Code CLI 能够通过本地代理路由到你配置的模型 Provider（如 OpenAI 兼容接口）。
+
+### 工作原理
+
+```
+Claude Code CLI (容器内)
+  │ ANTHROPIC_BASE_URL=http://127.0.0.1:3000
+  ▼
+CCR (端口 3000, 本地代理)
+  │ 根据 config.json 路由到目标 Provider
+  ▼
+你的模型 API (外部或内部)
+  │ /v1/chat/completions, /v1/messages 等
+  ▼
+模型响应 → 返回给 Claude Code
+```
+
+### 配置 CCR
+
+编辑 `ccr-config.json`，配置你的模型 Provider：
+
+```json
+{
+  "PORT": 3000,
+  "HOST": "0.0.0.0",
+  "APIKEY": "test",
+  "API_TIMEOUT_MS": 600000,
+  "Providers": [
+    {
+      "name": "your-provider",
+      "api_base_url": "http://your-api-endpoint/v1/chat/completions",
+      "api_key": "your-api-key",
+      "models": ["your-model-name"],
+      "transformer": {
+        "use": [
+          ["maxtoken", { "max_tokens": 65536 }],
+          "streamoptions"
+        ]
+      }
+    }
+  ],
+  "Router": {
+    "default": "your-provider,your-model-name"
+  }
+}
+```
+
+**配置字段说明**:
+
+| 字段 | 说明 |
+|------|------|
+| `Providers[].name` | Provider 标识名 |
+| `Providers[].api_base_url` | 模型 API 地址 (需支持 OpenAI 兼容格式) |
+| `Providers[].api_key` | API 密钥 |
+| `Providers[].models` | 该 Provider 支持的模型列表 |
+| `Router.default` | 默认路由: `"provider名,模型名"` |
+
+**支持的端点**: `/v1/chat/completions`、`/v1/completions`、`/v1/responses`、`/v1/messages` (Anthropic 格式)
+
+### 在沙盒中使用 Claude Code
+
+通过 SDK 进入沙盒后，直接运行 `claude` 命令即可：
+
+```python
+# 启动 Claude Code 交互式会话
+result = sbx.commands.run("claude")
+
+# 或者用非交互模式执行单个任务
+result = sbx.commands.run('claude -p "写一个 hello world 程序"')
+print(result.stdout)
 ```
 
 ---
@@ -430,6 +512,7 @@ supervisorctl restart my-service
 - `44772` - execd
 - `44771` - jupyter
 - `49983` - envd
+- `3000` - ccr (Claude Code Router)
 
 建议你的服务使用 8000-9000 范围的端口，或其他未占用的高位端口。
 
