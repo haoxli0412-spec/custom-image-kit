@@ -7,12 +7,12 @@ set -e
 # ----------------------------------------------------------
 # 配置区 (请修改为你的实际值)
 # ----------------------------------------------------------
-REGISTRY="registry.cn-sh-01.sensecore.cn"   # 你的镜像仓库地址
-NAMESPACE="ccr-sandbox"                   # 你的命名空间
-IMAGE_NAME="sandbox-server-test-autoimage"                  # 镜像名称
+REGISTRY_HOST="registry.example.com"      # 你的镜像仓库域名
+NAMESPACE="your-namespace"                # 你的命名空间
+IMAGE_NAME="custom-sandbox"               # 镜像名称
 TAG="${1:-latest}"                            # 镜像 tag, 默认 latest, 可通过参数传入
 
-FULL_IMAGE="${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}:${TAG}"
+FULL_IMAGE="${REGISTRY_HOST}/${NAMESPACE}/${IMAGE_NAME}:${TAG}"
 
 # ----------------------------------------------------------
 # 前置检查
@@ -54,7 +54,7 @@ read -p "是否推送到镜像仓库? [y/N] " -n 1 -r
 echo ""
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "[3/3] 推送镜像到 ${REGISTRY}..."
+    echo "[3/3] 推送镜像到 ${REGISTRY_HOST}..."
     docker push "${FULL_IMAGE}"
     echo ""
     echo "============================================================"
