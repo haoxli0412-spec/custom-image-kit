@@ -47,7 +47,7 @@
 ## 快速开始
 
 ```bash
-# 1. 准备文件 (确保 envd 二进制在当前目录)
+# 1. 准备文件 (确保 envd 二进制在当前目录),注意将 Dockerfile 中 base 镜像的镜像仓地址替换为真实地址
 ls
 # Dockerfile  envd  ccr-config.json  build-and-push.sh  register-image.sh
 
@@ -60,14 +60,14 @@ chmod +x build-and-push.sh register-image.sh
 ./build-and-push.sh v1.0
 
 # 5. 注册到沙盒平台
-./register-image.sh registry.cn-sh-01.sensecore.cn/your-ns/custom-sandbox:v1.0
+./register-image.sh registry.example.com/your-namespace/custom-sandbox:v1.0
 ```
 
 ---
 
 ## 基镜像内置服务
 
-基镜像 `registry.cn-sh-01.sensecore.cn/ccr-sandbox/code-interpreter:v1.0.1-mixed` 预装了以下服务:
+基镜像 `registry.example.com/ccr-sandbox/code-interpreter:v1.0.1-mixed` 预装了以下服务:
 
 | 服务 | 端口 | 用途 | 协议 |
 |------|------|------|------|
@@ -100,7 +100,7 @@ from e2b_code_interpreter import Sandbox
 import os
 
 os.environ['E2B_API_KEY'] = 'your-api-key'
-os.environ['E2B_API_URL'] = 'https://sandbox.cn-sh-01.sensecoreapi.dev'
+os.environ['E2B_API_URL'] = 'https://sandbox-api.example.com'
 
 sbx = Sandbox.create(template="your-image-name")
 
@@ -421,7 +421,7 @@ print(result.stdout)
 ### Step 2: 构建并推送
 
 ```bash
-# 修改 build-and-push.sh 中的 REGISTRY/NAMESPACE/IMAGE_NAME
+# 修改 build-and-push.sh 中的 REGISTRY_HOST/NAMESPACE/IMAGE_NAME
 vim build-and-push.sh
 
 # 构建并推送
@@ -431,11 +431,11 @@ vim build-and-push.sh
 ### Step 3: 注册镜像
 
 ```bash
-# 修改 register-image.sh 中的 API_KEY
+# 修改 register-image.sh 中的 API_KEY。push 镜像需要一个特殊的 APIKEY 请联系服务提供方获取
 vim register-image.sh
 
 # 注册
-./register-image.sh registry.cn-sh-01.sensecore.cn/your-ns/custom-sandbox:v1.0
+./register-image.sh registry.example.com/your-namespace/custom-sandbox:v1.0
 ```
 
 ### Step 4: 通过 SDK 使用
@@ -445,10 +445,10 @@ from e2b_code_interpreter import Sandbox
 import os
 
 os.environ['E2B_API_KEY'] = 'your-api-key'
-os.environ['E2B_API_URL'] = 'https://sandbox.cn-sh-01.sensecoreapi.dev'
+os.environ['E2B_API_URL'] = 'https://sandbox-api.example.com'
 
 # 使用你的自定义镜像创建沙盒
-sbx = Sandbox.create(template="registry.cn-sh-01.sensecore.cn/your-ns/custom-sandbox:v1.0")
+sbx = Sandbox.create(template="registry.example.com/your-namespace/custom-sandbox:v1.0")
 
 # SDK command 操作
 result = sbx.commands.run("python --version")

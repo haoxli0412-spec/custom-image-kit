@@ -8,7 +8,7 @@ set -e
 # ----------------------------------------------------------
 # 配置区 (请修改为你的实际值)
 # ----------------------------------------------------------
-SANDBOX_API_URL="https://sandbox.cn-sh-04.sensecoreapi.dev"
+SANDBOX_API_URL="https://sandbox-api.example.com"
 API_KEY=""        # 沙盒平台的 API Key
 
 # 镜像全名 (与 build-and-push.sh 中推送的一致)
@@ -21,7 +21,7 @@ if [ -z "${IMAGE_NAME}" ]; then
     echo "用法: ./register-image.sh <镜像全名>"
     echo ""
     echo "示例:"
-    echo "  ./register-image.sh registry.cn-sh-01.sensecore.cn/your-ns/custom-sandbox:v1.0"
+    echo "  ./register-image.sh registry.example.com/your-namespace/custom-sandbox:v1.0"
     echo ""
     echo "说明: 镜像全名需要和推送到 registry 的完整名称一致"
     exit 1

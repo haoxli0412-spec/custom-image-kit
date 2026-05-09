@@ -14,7 +14,7 @@
 #   - 3000  : ccr (Claude Code Router, API 代理)
 # ============================================================
 
-FROM registry.cn-sh-01.sensecore.cn/ccr-sandbox/code-interpreter:v1.0.1-mixed
+FROM registry.example.com/ccr-sandbox/code-interpreter:v1.0.1-mixed
 
 # ----------------------------------------------------------
 # 1. 安装 envd (SDK command 支持)
